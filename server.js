@@ -1,6 +1,8 @@
 global.fetch = require('node-fetch')
 require('dotenv').config()
 
+const exclude = (require('./exclude.json') || []).reduce((acc, cur) => ({...acc, [cur]: true}), {})
+
 const Discord = require('discord.js')
 const tenor = require("tenorjs").client({
   Key: process.env.TENOR_KEY,
@@ -50,7 +52,6 @@ const COMMAND = /^\+(?<command>\w+)(?<parameters>.*)/
 const PARAMETERS = /(?:[^\s"]+|"[^"]*")+/
 const MENTION = /<@(?<id>.*)>/
 client.on('message', msg => {
-  console.log(msg)
   const match = COMMAND.exec(msg.content)
   if (match) {
     let command = commands[match.groups.command]
@@ -128,7 +129,7 @@ function processTickleRequest(msg, parameters) {
 
 function processSquishRequest(msg, parameters) {
   return interactionWithRandomGif(msg, parameters, {
-    gifQuery: 'squish cheeks',
+    gifQuery: 'cheeks',
     messageTemplate: (author, target) => `**${author}** squishes **${target}'s** cheeks!`,
     onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> squishes me! >////<`)
   })
@@ -145,28 +146,31 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
   const gif = await randomAnimeTenorPicture(gifQuery, limit)
   sendResponse(msg,
     messageTemplate(msg.author.username, msg.mentions.users.get(userIdMatch.groups.id).username),
-    gif.media[0].gif.url)
+    {url: gif.media[0].gif.url, id: gif.id})
 }
 
-function randomAnimeTenorPicture(query, limit = 30) {
+function randomAnimeTenorPicture(query, limit = 10) {
   return randomTenorPicture(`anime ${query}`, limit)
 }
 
 async function randomTenorPicture(query, limit) {
   let pick = Math.ceil(Math.random() * limit) - 1
 
-  const gifs = await tenor.Search.Query(query, limit)
+  const gifs = (await tenor.Search.Random(query, limit))
+    .filter(g => !(g.id in exclude))
+
   if (gifs.length < pick) pick = gifs.length - 1
 
   return gifs[pick]
 }
 
-function sendResponse(msg, text, imageUrl) {
+function sendResponse(msg, text, image) {
   msg.channel.send('', {
     embed: {
       title: text,
+      ...(process.env.DEV && {description: image.id}),
       image: {
-        url: imageUrl
+        url: image.url
       },
       footer: {
         text: 'Powered by https://tenor.com',
