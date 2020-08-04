@@ -1,9 +1,9 @@
 global.fetch = require('node-fetch')
-const keys = require('./keys.json')
+require('dotenv').config()
 
 const Discord = require('discord.js')
 const tenor = require("tenorjs").client({
-  Key: keys.tenor,
+  Key: process.env.TENOR_KEY,
   Filter: "off", // not case sensitive
   Locale: "en_US",
   MediaFilter: "minimal",
@@ -62,7 +62,7 @@ client.on('message', msg => {
   }
 })
 
-client.login(keys.discord).catch(console.error)
+client.login(process.env.DISCORD_KEY).catch(console.error)
 
 function processHelpRequest(msg, parameters) {
   const mergedCommands = Object.entries(commands).reduce((acc, [k, v]) => {
