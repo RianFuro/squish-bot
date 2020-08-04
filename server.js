@@ -50,7 +50,7 @@ const commands = {
 
 const COMMAND = /^\+(?<command>\w+)(?<parameters>.*)/
 const PARAMETERS = /(?:[^\s"]+|"[^"]*")+/
-const MENTION = /<@(?<id>.*)>/
+const MENTION = /(?:@(?<group>\w+)|<@!?(?<id>.*)>)/
 client.on('message', msg => {
   const match = COMMAND.exec(msg.content)
   if (match) {
@@ -144,8 +144,17 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
     return msg.channel.send(`<@${msg.author.id}> is very confused`)
 
   const gif = await randomAnimeTenorPicture(gifQuery, limit)
+
+  let targetName
+  if (userIdMatch.groups.id) {
+    const guildUser = msg.guild.member(msg.mentions.users.get(userIdMatch.groups.id))
+    targetName = guildUser.nickname || guildUser.user.username
+  } else if (userIdMatch.groups.group === 'everyone' || userIdMatch.groups.group === 'here') {
+    targetName = 'everyone'
+  } else targetName = userIdMatch.groups.group
+
   sendResponse(msg,
-    messageTemplate(msg.author.username, msg.mentions.users.get(userIdMatch.groups.id).username),
+    messageTemplate(msg.author.username, targetName),
     {url: gif.media[0].gif.url, id: gif.id})
 }
 
