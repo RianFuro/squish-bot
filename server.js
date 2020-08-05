@@ -1,6 +1,7 @@
 global.fetch = require('node-fetch')
 require('dotenv').config()
 
+const eightball = require('./eightball')
 const exclude = (require('./exclude.json') || []).reduce((acc, cur) => ({...acc, [cur]: true}), {})
 
 const Discord = require('discord.js')
@@ -45,19 +46,28 @@ const commands = {
   squish: {
     usage: '+squish {@mention}',
     handler: processSquishRequest
+  },
+  '8ball': {
+    usage: '+8ball {question}',
+    description: 'Ask Squish-senpai what to do',
+    handler: processEightBallRequest
+  },
+  eightball: {
+    alias: '8ball'
   }
 }
 
 const COMMAND = /^\+(?<command>\w+)(?<parameters>.*)/
-const PARAMETERS = /(?:[^\s"]+|"[^"]*")+/
+const PARAMETERS = /(?:[^\s"]+|"[^"]*")/g
 const MENTION = /(?:@(?<group>\w+)|<@!?(?<id>.*)>)/
+
 client.on('message', msg => {
   const match = COMMAND.exec(msg.content)
   if (match) {
     let command = commands[match.groups.command]
     if (!command) return msg.reply('this are not the droids you are looking for')
 
-    const parameters = match.groups.parameters.match(PARAMETERS)
+    const parameters = Array.from(match.groups.parameters.matchAll(PARAMETERS)).map(x => x[0])
     if (command.alias) command = commands[command.alias]
     return command.handler(msg, parameters)
   }
@@ -78,9 +88,9 @@ function processHelpRequest(msg, parameters) {
   const helpText = Object.entries(mergedCommands).reduce((acc, [k, v]) => {
     const usage = v.usage || `+${k}`
     return acc +
-      usage.padEnd(30, ' ') +
+      usage.padEnd(20, ' ') +
       (v.description || '') +
-      (v.aliases.length ? `(aliases: ${v.aliases.join(', ')})` : '') +
+      (v.aliases.length ? ` (aliases: ${v.aliases.join(', ')})` : '') +
       '\n'
   }, '')
 
@@ -135,6 +145,11 @@ function processSquishRequest(msg, parameters) {
   })
 }
 
+function processEightBallRequest(msg, parameters) {
+  const answer = eightball.possibleAnswers[Math.floor(Math.random() * eightball.possibleAnswers.length)]
+  sendTextResponse(msg, `> ${parameters.join(' ')}\n${answer}`)
+}
+
 async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemplate, onInvalidParameters, limit }) {
   if (!parameters)
     return onInvalidParameters()
@@ -153,7 +168,7 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
     targetName = 'everyone'
   } else targetName = userIdMatch.groups.group
 
-  sendResponse(msg,
+  sendEmbedResponse(msg,
     messageTemplate(msg.author.username, targetName),
     {url: gif.media[0].gif.url, id: gif.id})
 }
@@ -173,7 +188,7 @@ async function randomTenorPicture(query, limit) {
   return gifs[pick]
 }
 
-function sendResponse(msg, text, image) {
+function sendEmbedResponse(msg, text, image) {
   msg.channel.send('', {
     embed: {
       title: text,
@@ -186,4 +201,8 @@ function sendResponse(msg, text, image) {
       },
     }
   }).catch(console.error)
+}
+
+function sendTextResponse(msg, text) {
+  msg.channel.send(text, {}).catch(console.error)
 }
