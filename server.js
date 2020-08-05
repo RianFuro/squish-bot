@@ -183,16 +183,21 @@ function processHelpRequest(msg) {
     return acc
   },{})
 
-  const helpText = Object.entries(mergedCommands).reduce((acc, [k, v]) => {
-    const usage = v.usage || `+${k}`
-    return acc +
-      usage.padEnd(20, ' ') +
-      (v.description ? `${v.description} ` : '') +
-      (v.aliases.length ? `(aliases: ${v.aliases.join(', ')})` : '') +
-      '\n'
-  }, '')
+  const helpText =
+    `I am Squish Bot ^.^! I am considered to be in the early stages of construction, so I might break sometimes >.< please apologize!\n` +
+    `<@${msg.author.id}>, this is what i can do for you, master:\n` +
+    '```' + Object.entries(mergedCommands).reduce((acc, [k, v]) => {
+      const usage = v.usage || `+${k}`
+      return acc +
+        usage.padEnd(20, ' ') +
+        (v.description ? `${v.description} ` : '') +
+        (v.aliases.length ? `(aliases: ${v.aliases.join(', ')})` : '') +
+        '\n'
+    }, '') + '```' +
+    'If you find any bugs, or have suggestions or want to participate in any other way, you can open an Issue here: <https://github.com/RianFuro/squish-bot/issues>'
 
-  msg.reply(`this is what i can do for you, master:\n\`\`\`${helpText}\`\`\``)
+
+  msg.channel.send(helpText)
 }
 
 function processHugRequest(msg, parameters) {
