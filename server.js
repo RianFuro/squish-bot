@@ -98,6 +98,10 @@ const commands = {
     usage: '+kiss {@mention}',
     handler: processKissRequest
   },
+  pat: {
+    usage: '+pat {@mention}',
+    handler: processPatRequest
+  },
   '8ball': {
     usage: '+8ball {question}',
     description: 'Ask Squish-senpai what to do',
@@ -252,7 +256,15 @@ function processKissRequest(msg, paramters) {
   return interactionWithRandomGif(msg, paramters, {
     gifQuery: 'kiss',
     messageTemplate: (author, target) => `**${target}** received a kiss from **${author}**`,
-    onInvalidParameters: () => msg.challenge.send(`<@${msg.author.id}> kissed the mirror... awkward`)
+    onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> kissed the mirror... awkward`)
+  })
+}
+
+function processPatRequest(msg, parameters) {
+  return interactionWithRandomGif(msg, parameters, {
+    gifQuery: 'pat',
+    messageTemplate: (author, target) => `**${author}** patted **${target}** on the head`,
+    onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> patted themselfes on the back. Good job!`)
   })
 }
 
@@ -286,7 +298,7 @@ function processWagRequest(msg) {
 }
 
 async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemplate, onInvalidParameters, limit }) {
-  if (!parameters)
+  if (!parameters.length)
     return onInvalidParameters()
 
   const userIdMatch = MENTION.exec(parameters[0])
