@@ -207,7 +207,8 @@ function processHelpRequest(msg) {
     'If you find any bugs, or have suggestions or want to participate in any other way, you can open an Issue here: <https://github.com/RianFuro/squish-bot/issues>'
 
 
-  msg.channel.send(helpText)
+  msg.author.send(helpText)
+  msg.reply("I've sent you a message, master (* ^ ω ^)")
 }
 
 function processHugRequest(msg, parameters) {
