@@ -1,3 +1,4 @@
 node_modules/
 .env
 .idea/
+fetch-gif.js

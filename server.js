@@ -56,6 +56,11 @@ const commands = {
     usage: '+pat {@mention}',
     handler: processPatRequest
   },
+  bite: {
+    usage: '+bite {@mention}',
+    handler: processBiteRequest
+  },
+  nom: {alias: 'bite'},
   '8ball': {
     usage: '+8ball {question}',
     description: 'Ask Squish-senpai what to do',
@@ -225,7 +230,17 @@ function processPatRequest(msg, parameters) {
   return interactionWithRandomGif(msg, parameters, {
     gifQuery: 'pat',
     messageTemplate: (author, target) => `**${author}** patted **${target}** on the head`,
-    onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> patted themselfes on the back. Good job!`)
+    onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> patted themselves on the back. Good job!`)
+  })
+}
+
+function processBiteRequest(msg, parameters) {
+  return interactionWithRandomGif(msg, parameters, {
+    gifQuery: 'bite',
+    messageTemplate: (author, target) => `**${target}** was bitten by **${author}**`,
+    onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> bit their own tongue. Yikes! ~(>\_<~)`),
+    imageLoader: topRatedAnimeTenorPicture,
+    limit: 30
   })
 }
 
@@ -262,7 +277,7 @@ function processWagRequest(msg) {
   return animeGifResponse(msg, { gifQuery: 'wag tail' })
 }
 
-async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemplate, onInvalidParameters, limit }) {
+async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemplate, onInvalidParameters, limit, imageLoader }) {
   if (!parameters.length)
     return onInvalidParameters()
 
@@ -271,7 +286,7 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
     return msg.channel.send(`<@${msg.author.id}> is very confused`)
 
   let gif, retry = 0
-  while (!gif && ++retry < 10) gif = await randomAnimeTenorPicture(msg.guild, gifQuery, limit)
+  while (!gif && ++retry < 10) gif = await (imageLoader || randomAnimeTenorPicture)(msg.guild, gifQuery, limit)
   if (!gif) return msg.reply('I am sorry master, but I did not find any gifs for you :(')
 
 
@@ -300,10 +315,14 @@ function randomAnimeTenorPicture(guild, query, limit = 10) {
   return randomTenorPicture(guild, `anime ${query}`, limit)
 }
 
-async function randomTenorPicture(guild, query, limit = 10) {
+function topRatedAnimeTenorPicture(guild, query, limit = 10) {
+  return randomTenorPicture(guild, `anime ${query}`, limit, 'Query')
+}
+
+async function randomTenorPicture(guild, query, limit = 10, func = 'Random') {
   let pick = Math.ceil(Math.random() * limit) - 1
 
-  const gifs = (await tenor.Search.Random(query, limit))
+  const gifs = (await tenor.Search[func](query, limit))
     .filter(g => !(g.id in excludesFor(guild.id)))
 
   if (gifs.length < pick) pick = gifs.length - 1
