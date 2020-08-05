@@ -25,9 +25,7 @@ const commands = {
     usage: '+hug {@mention}',
     handler: processHugRequest
   },
-  cuddle: {
-    alias: 'hug'
-  },
+  cuddle: {alias: 'hug'},
   lick: {
     usage: '+lick {@mention}',
     handler: processLickRequest
@@ -36,9 +34,7 @@ const commands = {
     usage: '+poke {@mention}',
     handler: processPokeRequest
   },
-  touch: {
-    alias: 'poke'
-  },
+  touch: {alias: 'poke'},
   tickle: {
     usage: '+tickle {@mention}',
     handler: processTickleRequest
@@ -47,13 +43,37 @@ const commands = {
     usage: '+squish {@mention}',
     handler: processSquishRequest
   },
+  slap: {
+    usage: '+slap {@mentaion}',
+    handler: processSlapRequest
+  },
   '8ball': {
     usage: '+8ball {question}',
     description: 'Ask Squish-senpai what to do',
     handler: processEightBallRequest
   },
-  eightball: {
-    alias: '8ball'
+  eightball: {alias: '8ball'},
+  dog: {
+    handler: processDogRequest
+  },
+  cat: {
+    handler: processCatRequest
+  },
+  inu: {alias: 'dog'},
+  neko: {alias: 'cat'},
+  dance: {
+    handler: processDanceRequest
+  },
+  cry: {
+    handler: processCryRequest
+  },
+  sad: {alias: 'cry'},
+  laugh: {
+    handler: processLaughRequest
+  },
+  happy: {alias: 'laugh'},
+  wag: {
+    handler: processWagRequest
   }
 }
 
@@ -75,7 +95,7 @@ client.on('message', msg => {
 
 client.login(process.env.DISCORD_KEY).catch(console.error)
 
-function processHelpRequest(msg, parameters) {
+function processHelpRequest(msg) {
   const mergedCommands = Object.entries(commands).reduce((acc, [k, v]) => {
     if (v.alias) {
       if (!acc[v.alias]) acc[v.alias] = {aliases: [k]}
@@ -89,8 +109,8 @@ function processHelpRequest(msg, parameters) {
     const usage = v.usage || `+${k}`
     return acc +
       usage.padEnd(20, ' ') +
-      (v.description || '') +
-      (v.aliases.length ? ` (aliases: ${v.aliases.join(', ')})` : '') +
+      (v.description ? `${v.description} ` : '') +
+      (v.aliases.length ? `(aliases: ${v.aliases.join(', ')})` : '') +
       '\n'
   }, '')
 
@@ -150,6 +170,30 @@ function processEightBallRequest(msg, parameters) {
   sendTextResponse(msg, `> ${parameters.join(' ')}\n${answer}`)
 }
 
+function processDogRequest(msg) {
+  return gifResponse(msg, { gifQuery: 'dog cute' })
+}
+
+function processCatRequest(msg) {
+  return gifResponse(msg, { gifQuery: 'cat cute' })
+}
+
+function processDanceRequest(msg) {
+  return animeGifResponse(msg, { gifQuery: 'dance' })
+}
+
+function processCryRequest(msg) {
+  return animeGifResponse(msg, {gifQuery: 'cry' })
+}
+
+function processLaughRequest(msg) {
+  return animeGifResponse(msg, { gifQuery: 'laugh' })
+}
+
+function processWagRequest(msg) {
+  return animeGifResponse(msg, { gifQuery: 'wag tail' })
+}
+
 async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemplate, onInvalidParameters, limit }) {
   if (!parameters)
     return onInvalidParameters()
@@ -173,11 +217,19 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
     {url: gif.media[0].gif.url, id: gif.id})
 }
 
+function animeGifResponse(msg, { gifQuery }) {
+  return gifResponse(msg, {gifQuery, imageLoader: randomAnimeTenorPicture})
+}
+async function gifResponse(msg, { gifQuery, imageLoader }) {
+  const gif = await (imageLoader || randomTenorPicture)(gifQuery)
+  sendEmbedResponse(msg, '', {url: gif.media[0].gif.url, id: gif.id})
+}
+
 function randomAnimeTenorPicture(query, limit = 10) {
   return randomTenorPicture(`anime ${query}`, limit)
 }
 
-async function randomTenorPicture(query, limit) {
+async function randomTenorPicture(query, limit = 10) {
   let pick = Math.ceil(Math.random() * limit) - 1
 
   const gifs = (await tenor.Search.Random(query, limit))
