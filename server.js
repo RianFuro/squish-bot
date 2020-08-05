@@ -11,7 +11,7 @@ const tenor = require("tenorjs").client({
   MediaFilter: "minimal",
   DateFormat: 'YYYY-MM-DD - hh:mm:ss'
 });
-const client = new Discord.Client()
+const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
 
 const pg = new (require('pg').Client)({
   connectionString: process.env.DATABASE_URL,
@@ -141,6 +141,7 @@ const PARAMETERS = /(?:[^\s"]+|"[^"]*")/g
 const MENTION = /(?:@(?<group>\w+)|<@!?(?<id>.*)>)/
 
 client.on('message', msg => {
+  if (msg.partial) return
   const match = COMMAND.exec(msg.content)
   if (match) {
     let command = commands[match.groups.command]
@@ -155,7 +156,8 @@ client.on('message', msg => {
 client.on('messageReactionAdd', handleReactionsChanged)
 client.on('messageReactionRemove', handleReactionsChanged)
 
-function handleReactionsChanged(payload) {
+async function handleReactionsChanged(payload) {
+  if (payload.message.partial) await payload.message.fetch()
   if (payload.message.author.id !== client.user.id) return
   if (!payload.message.embeds[0]) return
 
@@ -313,7 +315,10 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
   if (!userIdMatch)
     return msg.channel.send(`<@${msg.author.id}> is very confused`)
 
-  const gif = await randomAnimeTenorPicture(msg.guild, gifQuery, limit)
+  let gif, retry = 0
+  while (!gif && ++retry < 10) gif = await randomAnimeTenorPicture(msg.guild, gifQuery, limit)
+  if (!gif) return msg.reply('I am sorry master, but I did not find any gifs for you :(')
+
 
   let targetName
   if (userIdMatch.groups.id) {
