@@ -2,6 +2,7 @@ global.fetch = require('node-fetch')
 require('dotenv').config()
 
 const eightball = require('./eightball')
+const {addGuildExclude, excludesFor, removeGuildExclude} = require('./excludes')
 
 const Discord = require('discord.js')
 const tenor = require("tenorjs").client({
@@ -12,53 +13,6 @@ const tenor = require("tenorjs").client({
   DateFormat: 'YYYY-MM-DD - hh:mm:ss'
 });
 const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
-
-const pg = new (require('pg').Client)({
-  connectionString: process.env.DATABASE_URL,
-  ...(!process.env.DEV && {ssl: {rejectUnauthorized: false}})
-})
-
-pg.connect()
-const staticExclude = (require('./exclude.json') || []).reduce((acc, cur) => ({...acc, [cur]: true}), {})
-const guildExcludes = {}
-pg.query("CREATE TABLE IF NOT EXISTS guild_excludes(id serial primary key, guild_id varchar unique, excludes json default '[]')")
-  .then(() => {
-    pg.query('SELECT * FROM guild_excludes')
-      .then(result => {
-        for (let row of result.rows) {
-          guildExcludes[row.guild_id] = row.excludes.reduce((acc, cur) => ({...acc, [cur]: true}), {})
-        }
-      })
-  }).catch(console.error)
-
-function excludesFor(guild) {
-  return {...staticExclude, ...guildExcludes[guild]}
-}
-function addGuildExclude(guild, gifId) {
-  if (!(guild in guildExcludes)) guildExcludes[guild] = []
-  guildExcludes[guild][gifId] = true
-
-  storeExcludes(guild)
-}
-function removeGuildExclude(guild, gifId) {
-  if (!(guild in guildExcludes)) guildExcludes[guild] = []
-  delete guildExcludes[guild][gifId]
-
-  storeExcludes(guild)
-}
-function storeExcludes(guild) {
-  console.log(guild, JSON.stringify(Object.keys(guildExcludes[guild])))
-  try {
-    pg.query(`
-      INSERT INTO guild_excludes (guild_id, excludes)
-      VALUES ($1, $2) 
-      ON CONFLICT (guild_id) DO UPDATE 
-        SET "excludes" = EXCLUDED."excludes";
-    `, [guild, JSON.stringify(Object.keys(guildExcludes[guild]))])
-  } catch (e) {
-    console.error(e)
-  }
-}
 
 
 client.on('ready', () => console.log('ready'))
@@ -171,10 +125,10 @@ async function handleReactionsChanged(payload) {
   const totalReactions = payload.message.reactions.cache.mapValues(v => v.count)
   const thumbsUp = totalReactions.get('👍') || 0
   const thumbsDown = totalReactions.get('👎') || 0
-  if (thumbsDown > thumbsUp && !(gifId in (guildExcludes[payload.message.guild.id] || {}))) {
+  if (thumbsDown > thumbsUp && !(gifId in excludesFor(payload.message.guild.id))) {
     addGuildExclude(payload.message.guild.id, gifId)
     payload.message.react('❌').catch(console.error)
-  } else if (thumbsDown <= thumbsUp && gifId in (guildExcludes[payload.message.guild.id] || {})) {
+  } else if (thumbsDown <= thumbsUp && gifId in excludesFor(payload.message.guild.id)) {
     removeGuildExclude(payload.message.guild.id, gifId)
     const banReaction = payload.message.reactions.cache.get('❌')
     if (banReaction && banReaction.me) banReaction.remove().catch(console.error)
