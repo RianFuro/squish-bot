@@ -122,6 +122,10 @@ const commands = {
   cry: {
     handler: processCryRequest
   },
+  blush: {
+    usage: '+blush',
+    handler: processBlushRequest
+  },
   sad: {alias: 'cry'},
   laugh: {
     handler: processLaughRequest
@@ -286,7 +290,11 @@ function processDanceRequest(msg) {
 }
 
 function processCryRequest(msg) {
-  return animeGifResponse(msg, {gifQuery: 'cry' })
+  return animeGifResponse(msg, { gifQuery: 'cry' })
+}
+
+function processBlushRequest(msg) {
+  return animeGifResponse(msg, { gifQuery: 'blush'})
 }
 
 function processLaughRequest(msg) {
