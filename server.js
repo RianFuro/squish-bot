@@ -2,7 +2,6 @@ global.fetch = require('node-fetch')
 require('dotenv').config()
 
 const eightball = require('./eightball')
-const exclude = (require('./exclude.json') || []).reduce((acc, cur) => ({...acc, [cur]: true}), {})
 
 const Discord = require('discord.js')
 const tenor = require("tenorjs").client({
@@ -13,6 +12,54 @@ const tenor = require("tenorjs").client({
   DateFormat: 'YYYY-MM-DD - hh:mm:ss'
 });
 const client = new Discord.Client()
+
+const pg = new (require('pg').Client)({
+  connectionString: process.env.DATABASE_URL,
+  ...(!process.env.DEV && {ssl: {rejectUnauthorized: false}})
+})
+
+pg.connect()
+const staticExclude = (require('./exclude.json') || []).reduce((acc, cur) => ({...acc, [cur]: true}), {})
+const guildExcludes = {}
+pg.query("CREATE TABLE IF NOT EXISTS guild_excludes(id serial primary key, guild_id varchar unique, excludes json default '[]')")
+  .then(() => {
+    pg.query('SELECT * FROM guild_excludes')
+      .then(result => {
+        for (let row of result.rows) {
+          guildExcludes[row.guild_id] = row.excludes.reduce((acc, cur) => ({...acc, [cur]: true}), {})
+        }
+      })
+  }).catch(console.error)
+
+function excludesFor(guild) {
+  return {...staticExclude, ...guildExcludes[guild]}
+}
+function addGuildExclude(guild, gifId) {
+  if (!(guild in guildExcludes)) guildExcludes[guild] = []
+  guildExcludes[guild][gifId] = true
+
+  storeExcludes(guild)
+}
+function removeGuildExclude(guild, gifId) {
+  if (!(guild in guildExcludes)) guildExcludes[guild] = []
+  delete guildExcludes[guild][gifId]
+
+  storeExcludes(guild)
+}
+function storeExcludes(guild) {
+  console.log(guild, JSON.stringify(Object.keys(guildExcludes[guild])))
+  try {
+    pg.query(`
+      INSERT INTO guild_excludes (guild_id, excludes)
+      VALUES ($1, $2) 
+      ON CONFLICT (guild_id) DO UPDATE 
+        SET "excludes" = EXCLUDED."excludes";
+    `, [guild, JSON.stringify(Object.keys(guildExcludes[guild]))])
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 
 client.on('ready', () => console.log('ready'))
 
@@ -47,6 +94,10 @@ const commands = {
     usage: '+slap {@mentaion}',
     handler: processSlapRequest
   },
+  kiss: {
+    usage: '+kiss {@mention}',
+    handler: processKissRequest
+  },
   '8ball': {
     usage: '+8ball {question}',
     description: 'Ask Squish-senpai what to do',
@@ -74,7 +125,7 @@ const commands = {
   happy: {alias: 'laugh'},
   wag: {
     handler: processWagRequest
-  }
+  },
 }
 
 const COMMAND = /^\+(?<command>\w+)(?<parameters>.*)/
@@ -92,6 +143,33 @@ client.on('message', msg => {
     return command.handler(msg, parameters)
   }
 })
+
+client.on('messageReactionAdd', handleReactionsChanged)
+client.on('messageReactionRemove', handleReactionsChanged)
+
+function handleReactionsChanged(payload) {
+  if (payload.message.author.id !== client.user.id) return
+  if (!payload.message.embeds[0]) return
+
+  const embed = payload.message.embeds[0]
+  if (!embed.author || embed.author.name !== 'Tenor') return
+
+  const imageUrl = embed.image.url
+  const gifId = imageUrl.split('?').pop()
+  if (!gifId) return
+
+  const totalReactions = payload.message.reactions.cache.mapValues(v => v.count)
+  const thumbsUp = totalReactions.get('👍') || 0
+  const thumbsDown = totalReactions.get('👎') || 0
+  if (thumbsDown > thumbsUp && !(gifId in (guildExcludes[payload.message.guild.id] || {}))) {
+    addGuildExclude(payload.message.guild.id, gifId)
+    payload.message.react('❌').catch(console.error)
+  } else if (thumbsDown <= thumbsUp && gifId in (guildExcludes[payload.message.guild.id] || {})) {
+    removeGuildExclude(payload.message.guild.id, gifId)
+    const banReaction = payload.message.reactions.cache.get('❌')
+    if (banReaction && banReaction.me) banReaction.remove().catch(console.error)
+  }
+}
 
 client.login(process.env.DISCORD_KEY).catch(console.error)
 
@@ -165,6 +243,14 @@ function processSquishRequest(msg, parameters) {
   })
 }
 
+function processKissRequest(msg, paramters) {
+  return interactionWithRandomGif(msg, paramters, {
+    gifQuery: 'kiss',
+    messageTemplate: (author, target) => `**${target}** received a kiss from **${author}**`,
+    onInvalidParameters: () => msg.challenge.send(`<@${msg.author.id}> kissed the mirror... awkward`)
+  })
+}
+
 function processEightBallRequest(msg, parameters) {
   const answer = eightball.possibleAnswers[Math.floor(Math.random() * eightball.possibleAnswers.length)]
   sendTextResponse(msg, `> ${parameters.join(' ')}\n${answer}`)
@@ -202,7 +288,7 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
   if (!userIdMatch)
     return msg.channel.send(`<@${msg.author.id}> is very confused`)
 
-  const gif = await randomAnimeTenorPicture(gifQuery, limit)
+  const gif = await randomAnimeTenorPicture(msg.guild, gifQuery, limit)
 
   let targetName
   if (userIdMatch.groups.id) {
@@ -221,19 +307,19 @@ function animeGifResponse(msg, { gifQuery }) {
   return gifResponse(msg, {gifQuery, imageLoader: randomAnimeTenorPicture})
 }
 async function gifResponse(msg, { gifQuery, imageLoader }) {
-  const gif = await (imageLoader || randomTenorPicture)(gifQuery)
+  const gif = await (imageLoader || randomTenorPicture)(msg.guild, gifQuery)
   sendEmbedResponse(msg, '', {url: gif.media[0].gif.url, id: gif.id})
 }
 
-function randomAnimeTenorPicture(query, limit = 10) {
-  return randomTenorPicture(`anime ${query}`, limit)
+function randomAnimeTenorPicture(guild, query, limit = 10) {
+  return randomTenorPicture(guild, `anime ${query}`, limit)
 }
 
-async function randomTenorPicture(query, limit = 10) {
+async function randomTenorPicture(guild, query, limit = 10) {
   let pick = Math.ceil(Math.random() * limit) - 1
 
   const gifs = (await tenor.Search.Random(query, limit))
-    .filter(g => !(g.id in exclude))
+    .filter(g => !(g.id in excludesFor(guild.id)))
 
   if (gifs.length < pick) pick = gifs.length - 1
 
@@ -246,11 +332,15 @@ function sendEmbedResponse(msg, text, image) {
       title: text,
       ...(process.env.DEV && {description: image.id}),
       image: {
-        url: image.url
+        url: `${image.url}?${image.id}`
       },
       footer: {
         text: 'Powered by https://tenor.com',
       },
+      author: {
+        name: 'Tenor',
+        url: 'https://tenor.com'
+      }
     }
   }).catch(console.error)
 }
