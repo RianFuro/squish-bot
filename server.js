@@ -78,6 +78,11 @@ const commands = {
   dance: {
     handler: processDanceRequest
   },
+  nap: {
+    handler: processNapRequest
+  },
+  sleep: {alias: 'nap'},
+  sleepy: {alias: 'nap'},
   cry: {
     handler: processCryRequest
   },
@@ -263,6 +268,10 @@ function processDanceRequest(msg) {
 
 function processCryRequest(msg) {
   return animeGifResponse(msg, { gifQuery: 'cry' })
+}
+
+function processNapRequest(msg) {
+  return animeGifResponse(msg, { gifQuery: 'nap' })
 }
 
 function processBlushRequest(msg) {
