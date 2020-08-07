@@ -2,7 +2,7 @@ const {interactionWithRandomGif} = require("../responses")
 
 module.exports = {
   usage: '+hug {@mention}',
-  aliases: ['cuddle'],
+  aliases: ['cuddle', 'snug'],
   handler(msg, parameters) {
     return interactionWithRandomGif(msg, parameters, {
       gifQuery: 'hug',
