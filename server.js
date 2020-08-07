@@ -60,6 +60,14 @@ const commands = {
     usage: '+bite {@mention}',
     handler: processBiteRequest
   },
+  cookie: {
+    usage: '+cookie {@mention}',
+    handler: processCookieRequest
+  },
+  star: {
+    usage: '+star {@mention}',
+    handler: processStarRequest
+  },
   nom: {alias: 'bite'},
   '8ball': {
     usage: '+8ball {question}',
@@ -249,6 +257,20 @@ function processBiteRequest(msg, parameters) {
   })
 }
 
+function processCookieRequest(msg, parameters) {
+  return interactionWithText(msg, parameters, {
+    messageTemplate: (author, target) => `**${author}** gave **${target}** a cookie! 🍪`,
+    onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> ate the cookie themselves!`)
+  })
+}
+
+function processStarRequest(msg, parameters) {
+  return interactionWithText(msg, parameters, {
+    messageTemplate: (author, target) => `**${target}** received a star from **${author}**! ⭐`,
+    onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> made themselves invincible!`)
+  })
+}
+
 function processEightBallRequest(msg, parameters) {
   const answer = eightball.possibleAnswers[Math.floor(Math.random() * eightball.possibleAnswers.length)]
   sendTextResponse(msg, `> ${parameters.join(' ')}\n${answer}`)
@@ -290,26 +312,41 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
   if (!parameters.length)
     return onInvalidParameters()
 
-  const userIdMatch = MENTION.exec(parameters[0])
-  if (!userIdMatch)
+  let targetName = parseTarget(msg, parameters[0])
+  if (!targetName)
     return msg.channel.send(`<@${msg.author.id}> is very confused`)
 
   let gif, retry = 0
   while (!gif && ++retry < 10) gif = await (imageLoader || randomAnimeTenorPicture)(msg.guild, gifQuery, limit)
   if (!gif) return msg.reply('I am sorry master, but I did not find any gifs for you :(')
 
-
-  let targetName
-  if (userIdMatch.groups.id) {
-    const guildUser = msg.guild.member(msg.mentions.users.get(userIdMatch.groups.id))
-    targetName = guildUser.nickname || guildUser.user.username
-  } else if (userIdMatch.groups.group === 'everyone' || userIdMatch.groups.group === 'here') {
-    targetName = 'everyone'
-  } else targetName = userIdMatch.groups.group
-
   sendEmbedResponse(msg,
     messageTemplate(msg.author.username, targetName),
     {url: gif.media[0].gif.url, id: gif.id})
+}
+async function interactionWithText(msg, parameters, { messageTemplate, onInvalidParameters }) {
+  if (!parameters.length)
+    return onInvalidParameters()
+
+  let targetName = parseTarget(msg, parameters[0])
+  if (!targetName)
+    return msg.channel.send(`<@${msg.author.id}> is very confused`)
+
+  sendTextResponse(msg,
+    messageTemplate(msg.author.username, targetName))
+}
+
+function parseTarget(msg, argument) {
+  const userIdMatch = MENTION.exec(argument)
+  if (!userIdMatch)
+    return undefined
+
+  if (userIdMatch.groups.id) {
+    const guildUser = msg.guild.member(msg.mentions.users.get(userIdMatch.groups.id))
+    return guildUser.nickname || guildUser.user.username
+  } else if (userIdMatch.groups.group === 'everyone' || userIdMatch.groups.group === 'here') {
+    return 'everyone'
+  } else return userIdMatch.groups.group
 }
 
 function animeGifResponse(msg, { gifQuery }) {
