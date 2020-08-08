@@ -1,7 +1,7 @@
 const {interactionWithRandomGif} = require("../responses")
 module.exports = {
   usage: '+poke {@mention}',
-  aliases: ['touch'],
+  aliases: ['touch', 'boop'],
   handler (msg, parameters) {
     return interactionWithRandomGif(msg, parameters, {
       gifQuery: 'poke',
