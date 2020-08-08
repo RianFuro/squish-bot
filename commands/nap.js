@@ -1,7 +1,7 @@
-const {animeGifResponse} = require("../responses")
+const {randomAnimeGifResponse} = require("../responses")
 module.exports = {
   aliases: ['sleep', 'sleepy'],
   handler(msg) {
-    return animeGifResponse(msg, { gifQuery: 'nap' })
+    return randomAnimeGifResponse(msg, { gifQuery: 'nap' })
   }
 }

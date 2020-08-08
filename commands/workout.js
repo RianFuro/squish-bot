@@ -1,6 +1,8 @@
-const {animeGifResponse} = require('../responses')
+const {randomAnimeGifResponse, gifFromListResponse} = require('../responses')
 module.exports = {
-  handler(msg) {
-    return animeGifResponse(msg, { gifQuery: 'workout', })
+  usage: '+workout [random]',
+  handler(msg, parameters) {
+    if (['r', 'rand', 'random']) return randomAnimeGifResponse(msg, {gifQuery: 'workout'})
+    else return gifFromListResponse(msg, { gifList: require('../lists/workout.json') })
   }
 }

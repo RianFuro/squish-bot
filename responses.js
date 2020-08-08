@@ -43,11 +43,16 @@ function parseTarget(msg, argument) {
   } else return userIdMatch.groups.group
 }
 
-function animeGifResponse(msg, { gifQuery }) {
-  return gifResponse(msg, {gifQuery, imageLoader: randomAnimeTenorPicture})
+function gifFromListResponse(msg, { gifList }) {
+  let pick = Math.ceil(Math.random() * gifList.length) - 1
+  sendEmbedResponse(msg, '', {url: gifList[pick]})
 }
 
-async function gifResponse(msg, { gifQuery, imageLoader }) {
+function randomAnimeGifResponse(msg, { gifQuery }) {
+  return randomGifResponse(msg, {gifQuery, imageLoader: randomAnimeTenorPicture})
+}
+
+async function randomGifResponse(msg, { gifQuery, imageLoader }) {
   const gif = await (imageLoader || randomTenorPicture)(msg.guild, gifQuery)
   sendEmbedResponse(msg, '', {url: gif.media[0].gif.url, id: gif.id})
 }
@@ -75,4 +80,11 @@ function sendEmbedResponse(msg, text, image) {
   }).catch(console.error)
 }
 
-module.exports = {interactionWithRandomGif, interactionWithText, animeGifResponse, gifResponse, textResponse}
+module.exports = {
+  interactionWithRandomGif,
+  interactionWithText,
+  randomAnimeGifResponse,
+  randomGifResponse,
+  textResponse,
+  gifFromListResponse
+}
