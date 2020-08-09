@@ -15,15 +15,15 @@ module.exports = {
       parameters.shift()
     }
 
-    fetch(rule34Search(parameters.map(p => `*${p}*`).concat([`rating:${rating}`]).join(" "))).then(async r => {
+    fetch(rule34Search(parameters.map(p => `*${p}*`).concat(['-animated', `rating:${rating}`]).join(" "))).then(async r => {
       try {
         const entries = (await r.json())
           .filter(e => !illegalTags.some(i => e.tags.split(" ").includes(i)))
 
-        console.log(entries)
-        console.log(rule34Search(parameters.map(p => `*${p}*`).concat([`rating:${rating}`]).join(" ")))
-
         const pick = entries[Math.ceil(Math.random() * entries.length) - 1]
+
+        console.log(rule34Search(parameters.map(p => `*${p}*`).concat([`rating:${rating}`]).join(" ")))
+        console.log(pick)
 
         return imageResponse(msg, '', {url: pick.file_url, id: pick.id})
       } catch (e) {
