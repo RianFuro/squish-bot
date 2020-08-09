@@ -12,7 +12,7 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
   while (!gif && ++retry < 10) gif = await (imageLoader || randomAnimeTenorPicture)(msg.guild, gifQuery, limit)
   if (!gif) return msg.reply('I am sorry master, but I did not find any gifs for you :(')
 
-  sendEmbedResponse(msg,
+  tenorImageResponse(msg,
     messageTemplate(msg.author.username, targetName),
     {url: gif.media[0].gif.url, id: gif.id})
 }
@@ -45,7 +45,7 @@ function parseTarget(msg, argument) {
 
 function gifFromListResponse(msg, { gifList }) {
   let pick = Math.ceil(Math.random() * gifList.length) - 1
-  sendEmbedResponse(msg, '', {url: gifList[pick]})
+  tenorImageResponse(msg, '', {url: gifList[pick]})
 }
 
 function randomAnimeGifResponse(msg, { gifQuery }) {
@@ -54,14 +54,22 @@ function randomAnimeGifResponse(msg, { gifQuery }) {
 
 async function randomGifResponse(msg, { gifQuery, imageLoader }) {
   const gif = await (imageLoader || randomTenorPicture)(msg.guild, gifQuery)
-  sendEmbedResponse(msg, '', {url: gif.media[0].gif.url, id: gif.id})
+  tenorImageResponse(msg, '', {url: gif.media[0].gif.url, id: gif.id})
 }
 
 function textResponse(msg, text) {
   msg.channel.send(text, {}).catch(console.error)
 }
 
-function sendEmbedResponse(msg, text, image) {
+function tenorImageResponse(msg, text, image) {
+  return imageResponse(msg, text, image, {
+    footer: 'Powered by https://tenor.com',
+    author: {
+      name: 'Tenor',
+      url: 'http://tenor.com'
+    }})
+}
+function imageResponse(msg, text, image, {footer, author} = {}) {
   msg.channel.send('', {
     embed: {
       title: text,
@@ -69,13 +77,13 @@ function sendEmbedResponse(msg, text, image) {
       image: {
         url: `${image.url}?${image.id}`
       },
-      footer: {
-        text: 'Powered by https://tenor.com',
-      },
-      author: {
-        name: 'Tenor',
-        url: 'https://tenor.com'
-      }
+      ...(!!footer && {footer: {
+        text: footer
+      }}),
+      ...(!!author && {author: {
+        name: author.name,
+        url: author.url
+      }})
     }
   }).catch(console.error)
 }
@@ -86,5 +94,6 @@ module.exports = {
   randomAnimeGifResponse,
   randomGifResponse,
   textResponse,
-  gifFromListResponse
+  gifFromListResponse,
+  imageResponse
 }
