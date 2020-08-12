@@ -59,7 +59,7 @@ async function randomGifResponse(msg, { gifQuery, imageLoader }) {
 }
 
 const illegalTags = ["loli", "shota", "teen", "child", "underage", "little", "shotacon", "cub"]
-async function randomBooruImageResponse(msg, parameters, { booru = 'gelbooru', limit = 10} = {}) {
+async function randomBooruImageResponse(msg, parameters, { tags = [], booru = 'gelbooru', limit = 10} = {}) {
   if (illegalTags.some(i => parameters.includes(i))) return msg.reply("That's illegal and you know it.")
 
   let rating = 'explicit'
@@ -68,7 +68,7 @@ async function randomBooruImageResponse(msg, parameters, { booru = 'gelbooru', l
     parameters.shift()
   }
 
-  let query = parameters.map(p => `*${p}*`).concat(['-animated', `rating:${rating}`]).concat(illegalTags.map(t => `-${t}`))
+  let query = parameters.map(p => `*${p}*`).concat(tags).concat(['-animated', `rating:${rating}`]).concat(illegalTags.map(t => `-${t}`))
   const entries = await Booru.search(booru, query, {limit, random: true})
   if (!entries.length) return msg.reply("I couldn't find anything :(")
 
