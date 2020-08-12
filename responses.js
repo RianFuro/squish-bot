@@ -1,4 +1,5 @@
 const {randomTenorPicture, randomAnimeTenorPicture} = require("./gifs")
+const Booru = require('booru')
 
 async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemplate, onInvalidParameters, limit, imageLoader }) {
   if (!parameters.length)
@@ -57,6 +58,26 @@ async function randomGifResponse(msg, { gifQuery, imageLoader }) {
   tenorImageResponse(msg, '', {url: gif.media[0].gif.url, id: gif.id})
 }
 
+const illegalTags = ["loli", "shota", "teen", "child", "underage", "little", "shotacon", "cub"]
+async function randomBooruImageResponse(msg, parameters, { booru = 'gelbooru', limit = 10} = {}) {
+  if (illegalTags.some(i => parameters.includes(i))) return msg.reply("That's illegal and you know it.")
+
+  let rating = 'explicit'
+  if (parameters[0] === 'safe') {
+    rating = 'questionable'
+    parameters.shift()
+  }
+
+  let query = parameters.map(p => `*${p}*`).concat(['-animated', `rating:${rating}`]).concat(illegalTags.map(t => `-${t}`))
+  const entries = await Booru.search(booru, query, {limit, random: true})
+  if (!entries.length) return msg.reply("I couldn't find anything :(")
+
+  const pick = entries[Math.ceil(Math.random() * entries.length) - 1]
+  console.log(query, pick)
+
+  return imageResponse(msg, '', {url: pick.fileUrl, id: pick.id})
+}
+
 function textResponse(msg, text) {
   msg.channel.send(text, {}).catch(console.error)
 }
@@ -93,6 +114,7 @@ module.exports = {
   interactionWithText,
   randomAnimeGifResponse,
   randomGifResponse,
+  randomBooruImageResponse,
   textResponse,
   gifFromListResponse,
   imageResponse
