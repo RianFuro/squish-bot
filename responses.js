@@ -13,8 +13,9 @@ async function interactionWithRandomGif(msg, parameters, { gifQuery, messageTemp
   while (!gif && ++retry < 10) gif = await (imageLoader || randomAnimeTenorPicture)(msg.guild, gifQuery, limit)
   if (!gif) return msg.reply('I am sorry master, but I did not find any gifs for you :(')
 
+  const authorInGuild = msg.guild.member(msg.author)
   tenorImageResponse(msg,
-    messageTemplate(msg.author.username, targetName),
+    messageTemplate(authorInGuild.nickname || msg.author.username, targetName),
     {url: gif.media[0].gif.url, id: gif.id})
 }
 
@@ -26,8 +27,9 @@ async function interactionWithText(msg, parameters, { messageTemplate, onInvalid
   if (!targetName)
     return msg.channel.send(`<@${msg.author.id}> is very confused`)
 
+  const authorInGuild = msg.guild.member(msg.author)
   textResponse(msg,
-    messageTemplate(msg.author.username, targetName))
+    messageTemplate(authorInGuild.nickname || msg.author.username, targetName))
 }
 
 const MENTION = /(?:@(?<group>\w+)|<@!?(?<id>.*)>)/
@@ -68,7 +70,7 @@ async function randomBooruImageResponse(msg, parameters, { tags = [], booru = 'g
     parameters.shift()
   }
 
-  let query = parameters.map(p => `*${p}*`).concat(tags).concat(['-animated', `rating:${rating}`]).concat(illegalTags.map(t => `-${t}`))
+  let query = parameters.map(p => `*${p}*`).concat(tags).concat(['-animated', '-furry', `rating:${rating}`]).concat(illegalTags.map(t => `-${t}`))
   const entries = await Booru.search(booru, query, {limit, random: true})
   if (!entries.length) return msg.reply("I couldn't find anything :(")
 
