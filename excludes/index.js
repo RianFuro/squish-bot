@@ -3,18 +3,19 @@ const pg = new (require('pg').Client)({
   ...(!process.env.DEV && {ssl: {rejectUnauthorized: false}})
 })
 
-pg.connect()
 const staticExclude = (require('./global-exclude.json') || []).reduce((acc, cur) => ({...acc, [cur]: true}), {})
 const guildExcludes = {}
-pg.query("CREATE TABLE IF NOT EXISTS guild_excludes(id serial primary key, guild_id varchar unique, excludes json default '[]')")
-  .then(() => {
-    pg.query('SELECT * FROM guild_excludes')
-      .then(result => {
-        for (let row of result.rows) {
-          guildExcludes[row.guild_id] = row.excludes.reduce((acc, cur) => ({...acc, [cur]: true}), {})
-        }
-      })
-  }).catch(console.error)
+pg.connect().then(() =>
+  pg.query("CREATE TABLE IF NOT EXISTS guild_excludes(id serial primary key, guild_id varchar unique, excludes json default '[]')")
+    .then(() => {
+      pg.query('SELECT * FROM guild_excludes')
+        .then(result => {
+          for (let row of result.rows) {
+            guildExcludes[row.guild_id] = row.excludes.reduce((acc, cur) => ({...acc, [cur]: true}), {})
+          }
+        })
+    })
+).catch(console.error)
 
 function storeExcludes(guild) {
   console.log(guild, JSON.stringify(Object.keys(guildExcludes[guild])))
