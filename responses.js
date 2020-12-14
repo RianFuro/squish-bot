@@ -104,7 +104,6 @@ function imageResponse(msg, text, image, {footer, author} = {}) {
         text: footer
       }}),
       ...(!!author && {author: {
-        name: author.name,
         url: author.url
       }})
     }
