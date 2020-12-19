@@ -86,13 +86,10 @@ function textResponse(msg, text) {
 
 function tenorImageResponse(msg, text, image) {
   return imageResponse(msg, text, image, {
-    footer: 'Powered by https://tenor.com',
-    author: {
-      name: 'Tenor',
-      url: 'http://tenor.com'
-    }})
+    footer: 'Powered by https://tenor.com'
+  })
 }
-function imageResponse(msg, text, image, {footer, author} = {}) {
+function imageResponse(msg, text, image, {footer} = {}) {
   msg.channel.send('', {
     embed: {
       title: text,
@@ -102,9 +99,6 @@ function imageResponse(msg, text, image, {footer, author} = {}) {
       },
       ...(!!footer && {footer: {
         text: footer
-      }}),
-      ...(!!author && {author: {
-        url: author.url
       }})
     }
   }).catch(console.error)

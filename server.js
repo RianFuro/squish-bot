@@ -34,16 +34,17 @@ client.on('messageReactionRemove', handleReactionsChanged)
 
 const {addGuildExclude, excludesFor, removeGuildExclude} = require('./excludes')
 async function handleReactionsChanged(payload) {
-  console.log('entry handleReactionsChanged', payload)
+  console.log('entry handleReactionsChanged', payload, client.user.id)
 
   if (payload.message.partial) await payload.message.fetch()
   if (payload.message.author.id !== client.user.id) return
   if (!payload.message.embeds[0]) return
 
   const embed = payload.message.embeds[0]
-  if (!embed.author || embed.author.name !== 'Tenor') return
+  if (!embed) return
 
   const imageUrl = embed.image.url
+  if (!imageUrl.includes('media.tenor.com')) return
   const gifId = imageUrl.split('?').pop()
   if (!gifId) return
 
