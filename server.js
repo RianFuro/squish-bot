@@ -34,6 +34,8 @@ client.on('messageReactionRemove', handleReactionsChanged)
 
 const {addGuildExclude, excludesFor, removeGuildExclude} = require('./excludes')
 async function handleReactionsChanged(payload) {
+  console.log('entry handleReactionsChanged', payload)
+
   if (payload.message.partial) await payload.message.fetch()
   if (payload.message.author.id !== client.user.id) return
   if (!payload.message.embeds[0]) return
@@ -48,9 +50,12 @@ async function handleReactionsChanged(payload) {
   const totalReactions = payload.message.reactions.cache.mapValues(v => v.count)
   const thumbsUp = totalReactions.get('👍') || 0
   const thumbsDown = totalReactions.get('👎') || 0
+
+  console.log('handling change in gif reaction', payload.message.guild.id, gifId, thumbsUp, thumbsDown)
   if (thumbsDown > thumbsUp && !(gifId in excludesFor(payload.message.guild.id))) {
     addGuildExclude(payload.message.guild.id, gifId)
     payload.message.react('❌').catch(console.error)
+    console.log('added gif to local exclude list', payload.message.guild.id, gifId)
   } else if (thumbsDown <= thumbsUp && gifId in excludesFor(payload.message.guild.id)) {
     removeGuildExclude(payload.message.guild.id, gifId)
     const banReaction = payload.message.reactions.cache.get('❌')
