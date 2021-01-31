@@ -6,7 +6,7 @@ module.exports = {
     return interactionWithRandomGif(msg, parameters, {
       gifQuery: 'poke',
       messageTemplate: (author, target) => `**${target}** was poked by **${author}**`,
-      onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> is poking his nose`)
+      onInvalidParameters: () => msg.channel.send(`<@${msg.author.id}> is poking their nose`)
     })
   }
 }
